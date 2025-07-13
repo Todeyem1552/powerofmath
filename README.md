@@ -52,19 +52,6 @@ DynamoDB (Power Result Storage)
 
 ---
 
-## 📂 Project Structure (Recommended)
-
-📦 power-of-math-app
-├── amplify/ # Amplify frontend deployment files
-├── lambda/ # Lambda function (index.py)
-│ └── index.py
-├── cloudformation.yaml # CloudFormation IaC
-├── frontend.html # Frontend web form
-└── README.md # This file
-
-
----
-
 ## 📄 How It Works
 
 1. The user inputs a base and exponent via the Amplify-hosted frontend.
@@ -87,36 +74,41 @@ DynamoDB (Power Result Storage)
   "message": "Your result is 32.0"
 }
 
+---
 🔐 Suggested Security Improvements
+
 1. Use API Keys with Usage Plans 
-    Generate an API Key in API Gateway
-    Attach it to a Usage Plan with throttling limits
-    Require the key in headers (x-api-key)
+
+Generate an API Key in API Gateway
+Attach it to a Usage Plan with throttling limits
+Require the key in headers (x-api-key)
 
 2. Store API Key Securely
-    Use AWS Secrets Manager to store the API key
-    Access it securely in CI/CD or from Lambda if needed
+Use AWS Secrets Manager to store the API key
+Access it securely in CI/CD or from Lambda if needed
 
 3. IAM Role Restrictions
-    Limit Lambda IAM permissions to specific DynamoDB table ARN
-    Restrict logs to only required CloudWatch resources
+
+Limit Lambda IAM permissions to specific DynamoDB table ARN
+Restrict logs to only required CloudWatch resources
 
 ---
 
 🌐 Fixing CORS (Cross-Origin Resource Sharing)
-    To avoid CORS issues, set these in your API Gateway configuration:
+To avoid CORS issues, set these in your API Gateway configuration:
 
-    Method Response (POST /my-resource)
-    method.response.header.Access-Control-Allow-Headers: 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
-    method.response.header.Access-Control-Allow-Methods: 'OPTIONS,POST'
-    method.response.header.Access-Control-Allow-Origin: '*'
+Method Response (POST /my-resource)
+method.response.header.Access-Control-Allow-Headers: 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
+method.response.header.Access-Control-Allow-Methods: 'OPTIONS,POST'
+method.response.header.Access-Control-Allow-Origin: '*'
 
-    Integration Response (Lambda response headers)
-    {
-    "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-    "Access-Control-Allow-Methods": "OPTIONS,POST",
-    "Access-Control-Allow-Origin": "*"
-    }
+Integration Response (Lambda response headers)
+
+{
+"Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+"Access-Control-Allow-Methods": "OPTIONS,POST",
+"Access-Control-Allow-Origin": "*"
+}
 
 
 
