@@ -1,0 +1,203 @@
+Resources:
+  # Provision DynamoDB
+  DynamoDB:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: "PowerofMathDatabase"
+      AttributeDefinitions:
+        - AttributeName: ID
+          AttributeType: S
+      KeySchema: 
+        - AttributeName: ID
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  # Provision Lambda Function
+  AWSLambdaFunction:
+     Type: AWS::Lambda::Function
+     Properties:
+       Description: "PowerOfMathLambda"
+       FunctionName: !Sub '${AWS::StackName}-${AWS::Region}-lambda'
+       Handler: index.handler
+       Role: !GetAtt AWSLambdaExecutionRole.Arn
+       Timeout: 360
+       Runtime: python3.12
+       Code:
+         ZipFile: |
+          # import the JSON utility package
+          import json
+          # import the Python math library
+          import json
+          import math
+          import boto3
+          from time import gmtime, strftime
+          from typing import Any, Dict
+
+          # Initialize DynamoDB resource and select the table
+          dynamodb = boto3.resource('dynamodb')
+          table = dynamodb.Table('PowerofMathDatabase')
+
+          # Get the current time in a human-readable format
+          now = strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime())
+
+          def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+          """
+          Lambda handler function to calculate power of two numbers, save the result to DynamoDB, and return a response.
+          
+          Parameters:
+              event (dict): The input event containing 'base' and 'exponent'.
+              context (Any): The Lambda context object.
+
+          Returns:
+              dict: A response object with status code and body.
+          """
+          try:
+              # Extract base and exponent from the event
+              base = int(event.get('base'))
+              exponent = int(event.get('exponent'))
+
+              # Calculate the power
+              math_result = math.pow(base, exponent)
+
+              # Write the result and timestamp to DynamoDB
+              response = table.put_item(
+                  Item={
+                      'ID': str(math_result),
+                      'LatestGreetingTime': now
+                  }
+              )
+
+              # Log the response for debugging
+              print(f"DynamoDB Response: {response}")
+
+              # Return the result as a JSON response
+              return {
+                  'statusCode': 200,
+                  "headers": {
+                      "Access-Control-Allow-Origin": "*",
+                      "Access-Control-Allow-Methods": "OPTIONS, POST",
+                      "Access-Control-Allow-Headers": "Content-Type,x-api-key"
+                  },
+                  'body': json.dumps({'message': f'Your result is {math_result}'})
+              }
+
+          except KeyError as e:
+              # Handle missing keys in the event
+              error_message = f"Missing key in event: {e}"
+              print(error_message)
+              return {
+                  'statusCode': 400,
+                  "headers": {
+                      "Access-Control-Allow-Origin": "*",
+                      "Access-Control-Allow-Methods": "OPTIONS, POST",
+                      "Access-Control-Allow-Headers": "Content-Type,x-api-key"
+                  },
+                  'body': json.dumps({'error': error_message})
+              }
+          except ValueError as e:
+              # Handle invalid input values
+              error_message = f"Invalid input value: {e}"
+              print(error_message)
+              return {
+                  'statusCode': 400,
+                  "headers": {
+                      "Access-Control-Allow-Origin": "*",
+                      "Access-Control-Allow-Methods": "OPTIONS, POST",
+                      "Access-Control-Allow-Headers": "Content-Type,x-api-key"
+                  },
+                  'body': json.dumps({'error': error_message})
+              }
+          except Exception as e:
+              # Handle all other errors
+              error_message = f"An error occurred: {e}"
+              print(error_message)
+              return {
+                  'statusCode': 500,
+                  "headers": {
+                      "Access-Control-Allow-Origin": "*",
+                      "Access-Control-Allow-Methods": "OPTIONS, POST",
+                      "Access-Control-Allow-Headers": "Content-Type,x-api-key"
+                  },
+                  'body': json.dumps({'error': error_message})
+              }
+
+  AWSLambdaExecutionRole:
+     Type: AWS::IAM::Role
+     Properties:
+       AssumeRolePolicyDocument:
+         Statement:
+         - Action:
+           - sts:AssumeRole
+           Effect: Allow
+           Principal:
+             Service:
+             - lambda.amazonaws.com
+         Version: '2012-10-17'
+       Path: "/"
+       Policies:
+       - PolicyDocument:
+           Statement:
+           - Action:
+             - logs:CreateLogGroup
+             - logs:CreateLogStream
+             - logs:PutLogEvents
+             Effect: Allow
+             Resource: arn:aws:logs:*:*:*
+           Version: '2012-10-17'
+         PolicyName: !Sub ${AWS::StackName}-${AWS::Region}-AWSLambda-CW
+       - PolicyDocument:
+           Statement:
+           - Action:
+             -  dynamodb:PutItem
+             -  dynamodb:DeleteItem
+             -  dynamodb:GetItem
+             -  dynamodb:Scan
+             -  dynamodb:Query
+             -  dynamodb:UpdateItem
+             Effect: Allow
+             Resource:
+             - !GetAtt DynamoDB.Arn
+           Version: '2012-10-17'
+         PolicyName: !Sub ${AWS::StackName}-${AWS::Region}-AWSLambda-DynamoDB
+       RoleName: !Sub ${AWS::StackName}-${AWS::Region}-AWSLambdaExecutionRole
+  
+  # Define the API Gateway Rest API
+  MyApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: PowerOfMathApiGateway
+
+  # Define the API Gateway Resource
+  MyApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt MyApiGateway.RootResourceId
+      PathPart: my-resource
+      RestApiId: !Ref MyApiGateway
+
+  # Define the API Gateway Method
+  MyApiMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: POST
+      ResourceId: !Ref MyApiResource
+      RestApiId: !Ref MyApiGateway
+      AuthorizationType: NONE
+
+
+  # Define the API Gateway Deployment
+  MyApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: MyApiMethod
+    Properties:
+      RestApiId: !Ref MyApiGateway
+      StageName: dev
+
+  # Define Permission for API Gateway to Invoke Lambda
+  ApiGatewayInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt AWSLambdaFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${MyApiGateway}/*/POST/my-resource

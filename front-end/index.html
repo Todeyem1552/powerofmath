@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To the Power of Math!</title>
+    <style>
+        body {
+            background-color: #222629;
+            font-family: system-ui, sans-serif;
+            margin: 0;
+            padding: 20px;
+            color: #FFFFFF;
+        }
+        h1 {
+            color: #FFFFFF;
+        }
+        label {
+            color: #86C232;
+            font-size: 18px;
+            display: block;
+            margin: 10px 0 5px;
+        }
+        input {
+            font-size: 16px;
+            padding: 5px;
+            width: 150px;
+        }
+        button {
+            background-color: #86C232;
+            color: #FFFFFF;
+            border: none;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #76B123;
+        }
+        form {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+    </style>
+    <script>
+        async function callAPI() {
+            const base = document.getElementById('base').value;
+            const exponent = document.getElementById('exponent').value;
+
+            if (!base || !exponent || isNaN(base) || isNaN(exponent)) {
+                alert("Please enter valid numbers for both fields.");
+                return;
+            }
+
+            try {
+                const response = await fetch("https://79305wx7xa.execute-api.us-east-1.amazonaws.com/dev/my-resource-new", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': 'taOTMpvLbc2jMXZUtqQeU5SQrscAwo3M7lzLLOqN',
+                    },
+                    body: JSON.stringify({ base: Number(base), exponent: Number(exponent) })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                alert(result.body);
+            } catch (error) {
+                console.error("Error calling API:", error);
+                alert("An error occurred while calculating. Please try again.");
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>To the Power of Math!</h1>
+    <form onsubmit="event.preventDefault(); callAPI();">
+        <label for="base">Base number:</label>
+        <input type="text" id="base" placeholder="Enter base" required>
+        <label for="exponent">...to the power of:</label>
+        <input type="text" id="exponent" placeholder="Enter exponent" required>
+        <button type="submit">Calculate</button>
+    </form>
+</body>
+</html>
